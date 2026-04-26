@@ -9,6 +9,7 @@ def main():
     parser.add_argument('--mode', type=str, required=True, choices=['mock', 'train', 'evaluate', 'smoke'], 
                         help="Mode to run: mock (generate data), train, evaluate, or smoke (run all three)")
     parser.add_argument('--epochs', type=int, default=5, help="Number of training epochs")
+    parser.add_argument('--batch_size', type=int, default=4096, help="Batch size (defaults to 4096 for massive VRAM)")
     parser.add_argument('--metadata_path', type=str, default='metadata_clean.csv', help="Path to cleaned metadata CSV")
     parser.add_argument('--hdf5_path', type=str, default='mock_waveforms.hdf5', help="Path to HDF5 waveform binary")
     
@@ -24,11 +25,11 @@ def main():
         if not os.path.exists(args.metadata_path):
             print(f"Warning: {args.metadata_path} not found. Please run data_prep.R first.")
         else:
-            train_model(epochs=args.epochs, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path)
+            train_model(epochs=args.epochs, batch_size=args.batch_size, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path)
             
     if args.mode in ['evaluate', 'smoke']:
         print("=== Starting Evaluation ===")
-        evaluate_model(metadata_path=args.metadata_path, hdf5_path=args.hdf5_path)
+        evaluate_model(batch_size=args.batch_size, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path)
 
 if __name__ == '__main__':
     main()
