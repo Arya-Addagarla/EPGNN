@@ -1,28 +1,31 @@
 import torch
 from torch_geometric.loader import DataLoader
-from dataset import STEADGraphDataset
-from model import MultimodalGNN
+from epgnn.data.dataset import STEADGraphDataset
+from epgnn.models.gnn import MultimodalGNN
 from sklearn.metrics import f1_score, accuracy_score, mean_squared_error
-import numpy as np
 
-def evaluate():
+def evaluate_model(metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5', model_path='earthquake_gnn.pth'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    dataset = STEADGraphDataset(metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5')
-    
+    try:
+        dataset = STEADGraphDataset(metadata_path=metadata_path, hdf5_path=hdf5_path)
+    except FileNotFoundError:
+        print("Dataset not found.")
+        return
+
     test_loader = DataLoader(dataset, batch_size=32, shuffle=False)
 
     model = MultimodalGNN(hidden_dim=64).to(device)
     try:
-        model.load_state_dict(torch.load('earthquake_gnn.pth', map_location=device, weights_only=True))
+        model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     except Exception as e:
+        print(f"Could not load model weights from {model_path}.")
         return
 
     model.eval()
     
     all_preds = []
     all_labels = []
-    
     all_mag_preds = []
     all_mag_true = []
 
@@ -43,12 +46,11 @@ def evaluate():
     f1 = f1_score(all_labels, all_preds)
     acc = accuracy_score(all_labels, all_preds)
     
+    print("\n--- Evaluation Results ---")
     print(f"Accuracy: {acc*100:.2f}%")
     print(f"F1-Score: {f1:.4f}")
     
     if len(all_mag_true) > 0:
         mse = mean_squared_error(all_mag_true, all_mag_preds)
         print(f"Magnitude MSE: {mse:.4f}")
-        
-if __name__ == '__main__':
-    evaluate()
+    print("--------------------------")

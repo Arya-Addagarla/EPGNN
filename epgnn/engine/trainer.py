@@ -2,16 +2,18 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
-from dataset import STEADGraphDataset
-from model import MultimodalGNN
+from epgnn.data.dataset import STEADGraphDataset
+from epgnn.models.gnn import MultimodalGNN
 from tqdm import tqdm
 
-def train():
+def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
     
     try:
-        dataset = STEADGraphDataset(metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5')
+        dataset = STEADGraphDataset(metadata_path=metadata_path, hdf5_path=hdf5_path)
     except FileNotFoundError:
+        print("Dataset not found. Please generate or download it first.")
         return
 
     train_size = int(0.8 * len(dataset))
@@ -26,14 +28,12 @@ def train():
     clf_criterion = nn.CrossEntropyLoss()
     reg_criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-
-    num_epochs = 5
     
-    for epoch in range(num_epochs):
+    for epoch in range(epochs):
         model.train()
         train_loss = 0.0
         
-        for data in tqdm(train_loader):
+        for data in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}"):
             data = data.to(device)
             optimizer.zero_grad()
             
@@ -53,7 +53,7 @@ def train():
             
             train_loss += loss.item()
             
+        print(f"Epoch {epoch+1} | Train Loss: {train_loss/len(train_loader):.4f}")
+            
     torch.save(model.state_dict(), 'earthquake_gnn.pth')
-
-if __name__ == '__main__':
-    train()
+    print("Model saved to earthquake_gnn.pth")
