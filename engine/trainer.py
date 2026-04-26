@@ -1,9 +1,9 @@
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
 from data.dataset import STEADGraphDataset
 from models.gnn import MultimodalGNN
+from losses.custom_losses import EPGNNLoss
 from tqdm import tqdm
 
 def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5'):
@@ -25,8 +25,7 @@ def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_wa
 
     model = MultimodalGNN(hidden_dim=64).to(device)
 
-    clf_criterion = nn.CrossEntropyLoss()
-    reg_criterion = nn.MSELoss()
+    criterion = EPGNNLoss(mag_weight=0.1)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     
     for epoch in range(epochs):
@@ -39,14 +38,7 @@ def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_wa
             
             logits, mag_pred = model(data.x, data.edge_index, data.batch, data.pos)
             
-            loss_clf = clf_criterion(logits, data.y.view(-1))
-            
-            mask = data.y.view(-1) == 1
-            if mask.sum() > 0:
-                loss_mag = reg_criterion(mag_pred[mask].squeeze(-1), data.mag[mask].squeeze(-1))
-                loss = loss_clf + 0.1 * loss_mag
-            else:
-                loss = loss_clf
+            loss = criterion(logits, mag_pred, data.y, data.mag)
                 
             loss.backward()
             optimizer.step()
