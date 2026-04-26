@@ -4,10 +4,9 @@ set -e
 echo "=== Running EPGNN Full Scale Training ==="
 
 # Check if real data exists
-if [ ! -f "chunk2.hdf5" ]; then
-    echo "Error: Real STEAD data (e.g., chunk2.hdf5) not found in the root directory."
-    echo "Please download the STEAD dataset from Kaggle before running this."
-    exit 1
+if [ ! -f "stead_earthquake.csv" ]; then
+    echo "Real STEAD data not found. Initiating download..."
+    bash scripts/download_datasets.sh
 fi
 
 # Run R data prep
