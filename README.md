@@ -1,58 +1,49 @@
 # EPGNN (Earthquake Prediction Graph Neural Network)
 
-This repository contains the PyTorch-based implementation of EPGNN, a research framework designed to detect early-warning seismic events and learn robust representations from multivariate seismogram waveforms. 
+EPGNN is a PyTorch research codebase for early-warning event detection and representation learning on multivariate seismic waveforms.
 
-The architecture leverages Multimodal Graph Neural Networks to extract both spatial and temporal features from complex vibration data. Built for scalability, the pipeline is capable of running on local machines for rapid prototyping with synthetic data, as well as on high-end compute clusters (e.g., NVIDIA GPUs with ≥24GB VRAM) for large-scale training.
+This repository is initialized to run locally for synthetic smoke tests and on a target high-end NVIDIA GPU (≥24GB VRAM) for large-scale training on the STEAD dataset. Datasets are not committed; by default scripts expect the Kaggle STEAD CSV metadata and HDF5 waveform binaries in the project root.
 
-## Installation & Setup
-
-We recommend using an isolated Python virtual environment to manage dependencies:
+## Quick start
 
 ```bash
-# Initialize and activate the virtual environment
-python -m venv .venv
+bash scripts/setup_env.sh
 source .venv/bin/activate
-
-# Install required packages
-pip install --upgrade pip
-pip install -r requirements.txt
 ```
+*(Note: R dependencies are automatically installed during the data pipeline step.)*
 
-*Note: The data preprocessing stage relies on R. Packages such as `dplyr` and `readr` will be automatically resolved when the R pipeline is executed.*
-
-## Usage Guide
-
-The following commands outline the primary workflow, from generating test data to model evaluation.
+## Core commands
 
 ```bash
-# 1. Generate a mock STEAD dataset to verify the pipeline locally
-python mock_data.py
+# Synthetic end-to-end smoke test
+bash scripts/run_smoke_test.sh
 
-# 2. Execute the R pipeline to clean data and generate labels
-Rscript data_prep.R
+# Single-process local GPU training run
+python main.py --mode train --epochs 10
 
-# 3. Train the GNN model using available GPU acceleration
-python train.py
+# Downstream evaluation skeleton
+python main.py --mode evaluate
 
-# 4. Evaluate predictions to determine accuracy and F1-Score
-python evaluate.py
+# Server pretraining skeleton (for real STEAD data)
+bash scripts/run_full_train.sh
 ```
 
-## Data Management
+## Server handoff & Datasets
 
-The complete Stanford Earthquake Dataset (STEAD) is required for full-scale training. Due to its massive size (~80GB of HDF5 binaries), it is not included in this repository. 
+For researchers running the repo on a remote GPU server without project context:
 
-To run the model on a remote instance or server, download the dataset directly via the Kaggle CLI:
+Dataset downloads should be handled manually via the Kaggle API. The Stanford Earthquake Dataset (STEAD) is exceptionally large (~80GB of HDF5 waveforms). 
+
 ```bash
 kaggle datasets download -d mostafa/stead
 ```
-Our PyTorch Geometric `Dataset` implementation is optimized to map cleanly onto the `.csv` metadata while dynamically loading required HDF5 waveform chunks. This design strictly manages VRAM utilization during batch processing.
+Our PyTorch Geometric `Dataset` connects directly to the `.csv` metadata files and selectively reads node features from the underlying HDF5 binaries batch-by-batch to strictly manage VRAM utilization.
 
-## Project Structure
+## Repository layout
 
-- **`data_prep.R`** — Handles initial exploratory data analysis, missing value imputation, and robust standardization of raw seismic metadata.
-- **`mock_data.py`** — Generates synthetic waveforms that perfectly mimic the STEAD architecture, enabling immediate testing without downloading the 80GB dataset.
-- **`dataset.py`** — Contains the core PyTorch Geometric `Dataset` logic to map 3-channel (E, N, Z) seismogram signals into connected graph nodes.
-- **`model.py`** — The primary Multimodal Graph Neural Network architecture, combining 1D-CNN temporal feature extractors with Spatial Graph Convolution layers.
-- **`train.py`** — The main training loop handling batch ingestion, loss computation (classification & magnitude regression), and backpropagation.
-- **`evaluate.py`** — Performance evaluation script calculating standard metrics, including Magnitude MSE and F1-Scores.
+* `epgnn/data/` — R-based data cleaning pipelines, PyTorch Geometric Dataset classes, and synthetic mock generators.
+* `epgnn/models/` — End-to-end Multimodal Graph Neural Network backbone, containing the 1D-CNN temporal feature extractors and Spatial GCN layers.
+* `epgnn/engine/` — Minimal trainers, loss computation (classification & magnitude regression), and evaluators.
+* `scripts/` — Helper shell scripts for easy environment setup and execution.
+* `main.py` — Centralized CLI entry point for the entire repository.
+* `requirements.txt` — PyTorch and data processing dependencies.
