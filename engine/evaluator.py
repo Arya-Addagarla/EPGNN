@@ -4,7 +4,7 @@ from data.dataset import STEADGraphDataset
 from models.gnn import MultimodalGNN
 from sklearn.metrics import f1_score, accuracy_score, mean_squared_error
 
-def evaluate_model(metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5', model_path='earthquake_gnn.pth'):
+def evaluate_model(batch_size=4096, metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5', model_path='earthquake_gnn.pth'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     try:
@@ -13,7 +13,10 @@ def evaluate_model(metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms
         print("Dataset not found.")
         return
 
-    test_loader = DataLoader(dataset, batch_size=32, shuffle=False)
+    num_workers = 16 if device.type == 'cuda' else 0
+    pin_memory = device.type == 'cuda'
+    
+    test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     model = MultimodalGNN(hidden_dim=64).to(device)
     try:

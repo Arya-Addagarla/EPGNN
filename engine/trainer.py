@@ -6,10 +6,16 @@ from models.gnn import MultimodalGNN
 from losses.custom_losses import EPGNNLoss
 from tqdm import tqdm
 
-def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5'):
+import torch.backends.cudnn as cudnn
+
+def train_model(epochs=5, batch_size=4096, metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
+    if device.type == 'cuda':
+        cudnn.benchmark = True
+        print("Enabled cuDNN autotuning for high performance.")
+        
     try:
         dataset = STEADGraphDataset(metadata_path=metadata_path, hdf5_path=hdf5_path)
     except FileNotFoundError:
@@ -20,13 +26,17 @@ def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_wa
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    num_workers = 16 if device.type == 'cuda' else 0
+    pin_memory = device.type == 'cuda'
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
     model = MultimodalGNN(hidden_dim=64).to(device)
 
     criterion = EPGNNLoss(mag_weight=0.1)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    scaler = torch.amp.GradScaler('cuda') if device.type == 'cuda' else None
     
     for epoch in range(epochs):
         model.train()
@@ -36,12 +46,19 @@ def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_wa
             data = data.to(device)
             optimizer.zero_grad()
             
-            logits, mag_pred = model(data.x, data.edge_index, data.batch, data.pos)
-            
-            loss = criterion(logits, mag_pred, data.y, data.mag)
+            if scaler is not None:
+                with torch.amp.autocast('cuda'):
+                    logits, mag_pred = model(data.x, data.edge_index, data.batch, data.pos)
+                    loss = criterion(logits, mag_pred, data.y, data.mag)
                 
-            loss.backward()
-            optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                logits, mag_pred = model(data.x, data.edge_index, data.batch, data.pos)
+                loss = criterion(logits, mag_pred, data.y, data.mag)
+                loss.backward()
+                optimizer.step()
             
             train_loss += loss.item()
             
