@@ -1,0 +1,13 @@
+model:
+  hidden_dim: 64
+  dropout: 0.3
+
+training:
+  epochs: 50
+  batch_size: 32
+  learning_rate: 0.001
+  mag_loss_weight: 0.1
+
+data:
+  metadata_path: "metadata_clean.csv"
+  hdf5_path: "chunk2.hdf5"
