@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.loader import DataLoader
-from epgnn.data.dataset import STEADGraphDataset
-from epgnn.models.gnn import MultimodalGNN
+from data.dataset import STEADGraphDataset
+from models.gnn import MultimodalGNN
 from sklearn.metrics import f1_score, accuracy_score, mean_squared_error
 
 def evaluate_model(metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5', model_path='earthquake_gnn.pth'):

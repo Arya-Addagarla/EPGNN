@@ -12,7 +12,7 @@ fi
 
 # Run R data prep
 echo "Running R data preprocessing..."
-Rscript epgnn/data/data_prep.R
+Rscript data/data_prep.R
 
 # Train the model
 echo "Training model on target GPU..."

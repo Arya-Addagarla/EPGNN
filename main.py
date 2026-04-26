@@ -1,7 +1,7 @@
 import argparse
-from epgnn.engine.trainer import train_model
-from epgnn.engine.evaluator import evaluate_model
-from epgnn.data.mock_data import create_mock_stead_data
+from engine.trainer import train_model
+from engine.evaluator import evaluate_model
+from data.mock_data import create_mock_stead_data
 import os
 
 def main():

@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
-from epgnn.data.dataset import STEADGraphDataset
-from epgnn.models.gnn import MultimodalGNN
+from data.dataset import STEADGraphDataset
+from models.gnn import MultimodalGNN
 from tqdm import tqdm
 
 def train_model(epochs=5, metadata_path='metadata_clean.csv', hdf5_path='mock_waveforms.hdf5'):
