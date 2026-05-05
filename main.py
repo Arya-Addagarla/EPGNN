@@ -12,6 +12,13 @@ def main():
     parser.add_argument('--batch_size', type=int, default=4096, help="Batch size (defaults to 4096 for massive VRAM)")
     parser.add_argument('--metadata_path', type=str, default='metadata_clean.csv', help="Path to cleaned metadata CSV")
     parser.add_argument('--hdf5_path', type=str, default='mock_waveforms.hdf5', help="Path to HDF5 waveform binary")
+    parser.add_argument('--model_path', type=str, default='earthquake_gnn.pth', help="Path to saved model weights (.pth)")
+    
+    # Ablation Flags
+    parser.add_argument('--no_cnn', action='store_true', help="Ablate (remove) the Waveform CNN module")
+    parser.add_argument('--no_transformer', action='store_true', help="Ablate (remove) the Temporal Transformer module")
+    parser.add_argument('--no_gcn', action='store_true', help="Ablate (remove) the GCN spatial module")
+    parser.add_argument('--no_dropout', action='store_true', help="Ablate (remove) the Dropout layer")
     
     args = parser.parse_args()
     
@@ -25,11 +32,13 @@ def main():
         if not os.path.exists(args.metadata_path):
             print(f"Warning: {args.metadata_path} not found. Please run data_prep.R first.")
         else:
-            train_model(epochs=args.epochs, batch_size=args.batch_size, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path)
+            train_model(epochs=args.epochs, batch_size=args.batch_size, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path,
+                        use_cnn=not args.no_cnn, use_transformer=not args.no_transformer, use_gcn=not args.no_gcn, use_dropout=not args.no_dropout)
             
     if args.mode in ['evaluate', 'smoke']:
         print("=== Starting Evaluation ===")
-        evaluate_model(batch_size=args.batch_size, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path)
+        evaluate_model(batch_size=args.batch_size, metadata_path=args.metadata_path, hdf5_path=args.hdf5_path, model_path=args.model_path,
+                       use_cnn=not args.no_cnn, use_transformer=not args.no_transformer, use_gcn=not args.no_gcn, use_dropout=not args.no_dropout)
 
 if __name__ == '__main__':
     main()

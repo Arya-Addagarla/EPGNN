@@ -40,10 +40,11 @@ class STEADGraphDataset(Dataset):
                 
         x = torch.tensor(waveform.T, dtype=torch.float)
         y = torch.tensor([label], dtype=torch.long)
-        mag = torch.tensor([row['source_magnitude']], dtype=torch.float)
+        mag = torch.tensor([row['source_magnitude'] if not pd.isna(row['source_magnitude']) else 0.0], dtype=torch.float)
         pos = torch.tensor([[row['receiver_latitude'], row['receiver_longitude']]], dtype=torch.float)
+        precursor = torch.tensor([row['precursor']], dtype=torch.float)
         
-        data = Data(x=x, edge_index=self.edge_index, y=y, pos=pos, mag=mag)
+        data = Data(x=x, edge_index=self.edge_index, y=y, pos=pos, mag=mag, precursor=precursor)
         
         return data
 
